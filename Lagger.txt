@@ -1,0 +1,302 @@
+-- Optimized Lag Generator Script
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+-- Lag Variables
+local lagEnabled, lagIntensity, lagType, lagScope = false, 10, "Parts", "Local"
+local lagObjects = {}
+
+-- Helper function
+local function new(class, props)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        if k ~= "Parent" then obj[k] = v end
+    end
+    if props.Parent then obj.Parent = props.Parent end
+    return obj
+end
+
+-- Tween info
+local fadeIn = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local fadeOut = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local quick = TweenInfo.new(0.3)
+
+-- Lag Functions
+local lagFunctions = {
+    Parts = function()
+        while lagEnabled and lagType == "Parts" do
+            for i = 1, lagIntensity * 10 do
+                local part = Instance.new("Part")
+                part.Size = Vector3.new(math.random(1, 5), math.random(1, 5), math.random(1, 5))
+                local char = player.Character
+                if lagScope == "Local" and char and char:FindFirstChild("HumanoidRootPart") then
+                    part.Position = char.HumanoidRootPart.Position + Vector3.new(math.random(-50, 50), math.random(10, 50), math.random(-50, 50))
+                else
+                    part.Position = Vector3.new(math.random(-500, 500), math.random(50, 200), math.random(-500, 500))
+                end
+                part.Anchored = true
+                part.Parent = workspace
+                table.insert(lagObjects, part)
+            end
+            wait(0.1)
+        end
+    end,
+    
+    Explosions = function()
+        while lagEnabled and lagType == "Explosions" do
+            for i = 1, lagIntensity * 3 do
+                local explosion = Instance.new("Explosion")
+                local char = player.Character
+                if lagScope == "Local" and char and char:FindFirstChild("HumanoidRootPart") then
+                    explosion.Position = char.HumanoidRootPart.Position + Vector3.new(math.random(-30, 30), math.random(5, 30), math.random(-30, 30))
+                else
+                    explosion.Position = Vector3.new(math.random(-500, 500), math.random(50, 200), math.random(-500, 500))
+                end
+                explosion.BlastRadius = 10
+                explosion.BlastPressure = 100000
+                explosion.Parent = workspace
+            end
+            wait(0.2)
+        end
+    end,
+    
+    Fire = function()
+        while lagEnabled and lagType == "Fire" do
+            for i = 1, lagIntensity * 8 do
+                local part = Instance.new("Part")
+                part.Size = Vector3.new(2, 2, 2)
+                local char = player.Character
+                if lagScope == "Local" and char and char:FindFirstChild("HumanoidRootPart") then
+                    part.Position = char.HumanoidRootPart.Position + Vector3.new(math.random(-40, 40), math.random(5, 40), math.random(-40, 40))
+                else
+                    part.Position = Vector3.new(math.random(-500, 500), math.random(50, 200), math.random(-500, 500))
+                end
+                part.Anchored = true
+                part.Transparency = 1
+                part.Parent = workspace
+                local fire = Instance.new("Fire")
+                fire.Size, fire.Heat = 15, 15
+                fire.Parent = part
+                table.insert(lagObjects, part)
+            end
+            wait(0.1)
+        end
+    end,
+    
+    Beams = function()
+        while lagEnabled and lagType == "Beams" do
+            for i = 1, lagIntensity * 6 do
+                local part1 = Instance.new("Part")
+                local part2 = Instance.new("Part")
+                part1.Size, part2.Size = Vector3.new(1, 1, 1), Vector3.new(1, 1, 1)
+                part1.Anchored, part2.Anchored = true, true
+                part1.Transparency, part2.Transparency = 1, 1
+                
+                local char = player.Character
+                if lagScope == "Local" and char and char:FindFirstChild("HumanoidRootPart") then
+                    local rootPos = char.HumanoidRootPart.Position
+                    part1.Position = rootPos + Vector3.new(math.random(-40, 40), math.random(5, 40), math.random(-40, 40))
+                    part2.Position = rootPos + Vector3.new(math.random(-40, 40), math.random(5, 40), math.random(-40, 40))
+                else
+                    part1.Position = Vector3.new(math.random(-500, 500), math.random(50, 200), math.random(-500, 500))
+                    part2.Position = Vector3.new(math.random(-500, 500), math.random(50, 200), math.random(-500, 500))
+                end
+                
+                part1.Parent, part2.Parent = workspace, workspace
+                local att1, att2 = Instance.new("Attachment", part1), Instance.new("Attachment", part2)
+                local beam = Instance.new("Beam")
+                beam.Attachment0, beam.Attachment1 = att1, att2
+                beam.Width0, beam.Width1 = 2, 2
+                beam.Parent = part1
+                table.insert(lagObjects, part1)
+                table.insert(lagObjects, part2)
+            end
+            wait(0.1)
+        end
+    end
+}
+
+local function stopLag()
+    lagEnabled = false
+    wait(0.5)
+    for _, obj in pairs(lagObjects) do
+        if obj and obj.Parent then obj:Destroy() end
+    end
+    lagObjects = {}
+end
+
+-- Create GUI
+local gui = new("ScreenGui", {Name = "LagGeneratorGui", ResetOnSpawn = false, IgnoreGuiInset = true, Parent = PlayerGui})
+local main = new("Frame", {Size = UDim2.new(0, 380, 0, 260), Position = UDim2.new(0.5, -190, 0.5, -130), BackgroundColor3 = Color3.fromRGB(20, 28, 40), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = gui})
+
+new("UICorner", {CornerRadius = UDim.new(0, 12), Parent = main})
+local mainStroke = new("UIStroke", {Color = Color3.fromRGB(60, 100, 150), Thickness = 1, Transparency = 1, Parent = main})
+
+local icon = new("TextLabel", {Size = UDim2.new(0, 48, 0, 48), Position = UDim2.new(0.5, -24, 0, 20), BackgroundTransparency = 1, Text = "😭", TextSize = 36, TextTransparency = 1, BorderSizePixel = 0, Parent = main})
+local title = new("TextLabel", {Size = UDim2.new(1, -40, 0, 24), Position = UDim2.new(0, 20, 0, 72), Text = "CryHub | Steal a Brainrot", TextSize = 16, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(140, 180, 230), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+local subtitle = new("TextLabel", {Size = UDim2.new(1, -60, 0, 20), Position = UDim2.new(0, 30, 0, 96), Text = "Max Intensity Mode", TextSize = 10, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(160, 180, 210), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+
+-- Scope Selector
+local scopeLabel = new("TextLabel", {Size = UDim2.new(0, 80, 0, 16), Position = UDim2.new(0, 20, 0, 126), Text = "Scope:", TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(140, 180, 230), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = main})
+local scopeCont = new("Frame", {Size = UDim2.new(0, 300, 0, 28), Position = UDim2.new(0, 40, 0, 144), BackgroundColor3 = Color3.fromRGB(30, 42, 58), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = scopeCont})
+local scopeStroke = new("UIStroke", {Color = Color3.fromRGB(60, 100, 150), Thickness = 1, Transparency = 1, Parent = scopeCont})
+
+local scopeLeftArrow = new("TextButton", {Size = UDim2.new(0, 30, 1, 0), Position = UDim2.new(0, 0, 0, 0), Text = "←", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(120, 160, 200), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = scopeCont})
+local scopeBtn = new("TextButton", {Size = UDim2.new(1, -60, 1, 0), Position = UDim2.new(0, 30, 0, 0), Text = "Local (Near You)", Font = Enum.Font.Gotham, TextSize = 10, TextColor3 = Color3.fromRGB(200, 220, 240), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = scopeCont})
+local scopeRightArrow = new("TextButton", {Size = UDim2.new(0, 30, 1, 0), Position = UDim2.new(1, -30, 0, 0), Text = "→", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(120, 160, 200), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = scopeCont})
+
+-- Type Selector
+local typeLabel = new("TextLabel", {Size = UDim2.new(0, 80, 0, 16), Position = UDim2.new(0, 20, 0, 170), Text = "Type:", TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(140, 180, 230), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = main})
+local typeCont = new("Frame", {Size = UDim2.new(0, 300, 0, 28), Position = UDim2.new(0, 40, 0, 188), BackgroundColor3 = Color3.fromRGB(30, 42, 58), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = typeCont})
+local typeStroke = new("UIStroke", {Color = Color3.fromRGB(60, 100, 150), Thickness = 1, Transparency = 1, Parent = typeCont})
+
+local typeLeftArrow = new("TextButton", {Size = UDim2.new(0, 30, 1, 0), Position = UDim2.new(0, 0, 0, 0), Text = "←", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(120, 160, 200), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = typeCont})
+local typeBtn = new("TextButton", {Size = UDim2.new(1, -60, 1, 0), Position = UDim2.new(0, 30, 0, 0), Text = "Parts", Font = Enum.Font.Gotham, TextSize = 10, TextColor3 = Color3.fromRGB(200, 220, 240), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = typeCont})
+local typeRightArrow = new("TextButton", {Size = UDim2.new(0, 30, 1, 0), Position = UDim2.new(1, -30, 0, 0), Text = "→", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(120, 160, 200), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = typeCont})
+
+-- Action Buttons
+local startCont = new("Frame", {Size = UDim2.new(0, 120, 0, 28), Position = UDim2.new(0, 70, 0, 224), BackgroundColor3 = Color3.fromRGB(50, 120, 80), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = startCont})
+local startStroke = new("UIStroke", {Color = Color3.fromRGB(80, 160, 120), Thickness = 1.5, Transparency = 1, Parent = startCont})
+local startBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "Start", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Color3.fromRGB(220, 240, 255), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = startCont})
+
+local stopCont = new("Frame", {Size = UDim2.new(0, 120, 0, 28), Position = UDim2.new(0, 200, 0, 224), BackgroundColor3 = Color3.fromRGB(150, 60, 60), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = stopCont})
+local stopStroke = new("UIStroke", {Color = Color3.fromRGB(200, 100, 100), Thickness = 1.5, Transparency = 1, Parent = stopCont})
+local stopBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "Stop", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Color3.fromRGB(220, 240, 255), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = stopCont})
+
+local closeBtn = new("TextButton", {Size = UDim2.new(0, 28, 0, 28), Position = UDim2.new(1, -36, 0, 8), Text = "🔴", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(160, 180, 210), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = main})
+
+-- Fade In Animations
+local tweens = {
+    TweenService:Create(main, fadeIn, {BackgroundTransparency = 0.1}),
+    TweenService:Create(mainStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(scopeCont, fadeIn, {BackgroundTransparency = 0.5}),
+    TweenService:Create(scopeStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(typeCont, fadeIn, {BackgroundTransparency = 0.5}),
+    TweenService:Create(typeStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(startCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(startStroke, fadeIn, {Transparency = 0.5}),
+    TweenService:Create(stopCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(stopStroke, fadeIn, {Transparency = 0.5}),
+}
+
+for _, t in ipairs(tweens) do t:Play() end
+for _, obj in ipairs({icon, title, subtitle, scopeLabel, scopeLeftArrow, scopeBtn, scopeRightArrow, typeLabel, typeLeftArrow, typeBtn, typeRightArrow, startBtn, stopBtn, closeBtn}) do
+    TweenService:Create(obj, fadeIn, {TextTransparency = 0}):Play()
+end
+
+-- Close GUI
+local function closeGui()
+    for _, t in ipairs({
+        TweenService:Create(main, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(mainStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(scopeCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(scopeStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(typeCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(typeStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(startCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(startStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(stopCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(stopStroke, fadeOut, {Transparency = 1}),
+    }) do t:Play() end
+    for _, obj in ipairs({icon, title, subtitle, scopeLabel, scopeLeftArrow, scopeBtn, scopeRightArrow, typeLabel, typeLeftArrow, typeBtn, typeRightArrow, startBtn, stopBtn, closeBtn}) do
+        TweenService:Create(obj, fadeOut, {TextTransparency = 1}):Play()
+    end
+    task.wait(0.5)
+    stopLag()
+    gui:Destroy()
+end
+
+-- Events
+local function cycleScope()
+    lagScope = (lagScope == "Local") and "All" or "Local"
+    scopeBtn.Text = lagScope == "Local" and "Local (Near You)" or "All (Entire Map)"
+    TweenService:Create(scopeStroke, quick, {Color = Color3.fromRGB(100, 160, 220), Transparency = 0.4}):Play()
+    task.wait(0.2)
+    TweenService:Create(scopeStroke, quick, {Color = Color3.fromRGB(60, 100, 150), Transparency = 0.7}):Play()
+end
+
+scopeLeftArrow.MouseButton1Click:Connect(cycleScope)
+scopeRightArrow.MouseButton1Click:Connect(cycleScope)
+scopeBtn.MouseButton1Click:Connect(cycleScope)
+scopeBtn.MouseEnter:Connect(function() TweenService:Create(scopeCont, quick, {BackgroundTransparency = 0.4}):Play() TweenService:Create(scopeStroke, quick, {Transparency = 0.5}):Play() end)
+scopeBtn.MouseLeave:Connect(function() TweenService:Create(scopeCont, quick, {BackgroundTransparency = 0.5}):Play() TweenService:Create(scopeStroke, quick, {Transparency = 0.7}):Play() end)
+
+local lagTypes = {"Parts", "Explosions", "Fire", "Beams"}
+local currentTypeIndex = 1
+
+local function cycleTypeLeft()
+    currentTypeIndex = currentTypeIndex > 1 and currentTypeIndex - 1 or #lagTypes
+    lagType = lagTypes[currentTypeIndex]
+    typeBtn.Text = lagType
+    TweenService:Create(typeStroke, quick, {Color = Color3.fromRGB(100, 160, 220), Transparency = 0.4}):Play()
+    task.wait(0.2)
+    TweenService:Create(typeStroke, quick, {Color = Color3.fromRGB(60, 100, 150), Transparency = 0.7}):Play()
+end
+
+local function cycleTypeRight()
+    currentTypeIndex = (currentTypeIndex % #lagTypes) + 1
+    lagType = lagTypes[currentTypeIndex]
+    typeBtn.Text = lagType
+    TweenService:Create(typeStroke, quick, {Color = Color3.fromRGB(100, 160, 220), Transparency = 0.4}):Play()
+    task.wait(0.2)
+    TweenService:Create(typeStroke, quick, {Color = Color3.fromRGB(60, 100, 150), Transparency = 0.7}):Play()
+end
+
+typeLeftArrow.MouseButton1Click:Connect(cycleTypeLeft)
+typeRightArrow.MouseButton1Click:Connect(cycleTypeRight)
+typeBtn.MouseButton1Click:Connect(cycleTypeRight)
+typeBtn.MouseEnter:Connect(function() TweenService:Create(typeCont, quick, {BackgroundTransparency = 0.4}):Play() TweenService:Create(typeStroke, quick, {Transparency = 0.5}):Play() end)
+typeBtn.MouseLeave:Connect(function() TweenService:Create(typeCont, quick, {BackgroundTransparency = 0.5}):Play() TweenService:Create(typeStroke, quick, {Transparency = 0.7}):Play() end)
+
+-- Start/Stop buttons
+startBtn.MouseButton1Click:Connect(function()
+    if lagEnabled then return end
+    lagEnabled = true
+    startBtn.Text = "Running..."
+    spawn(lagFunctions[lagType])
+    TweenService:Create(startStroke, quick, {Color = Color3.fromRGB(100, 200, 150), Transparency = 0.3}):Play()
+end)
+
+startBtn.MouseEnter:Connect(function() if not lagEnabled then TweenService:Create(startCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(startStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end end)
+startBtn.MouseLeave:Connect(function() TweenService:Create(startCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(startStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+stopBtn.MouseButton1Click:Connect(function()
+    if not lagEnabled then return end
+    stopLag()
+    startBtn.Text = "Start"
+    TweenService:Create(stopStroke, quick, {Color = Color3.fromRGB(220, 120, 100), Transparency = 0.3}):Play()
+    task.wait(0.3)
+    TweenService:Create(stopStroke, quick, {Color = Color3.fromRGB(200, 100, 100), Transparency = 0.5}):Play()
+end)
+
+stopBtn.MouseEnter:Connect(function() TweenService:Create(stopCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(stopStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end)
+stopBtn.MouseLeave:Connect(function() TweenService:Create(stopCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(stopStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+closeBtn.MouseButton1Click:Connect(closeGui)
+closeBtn.MouseEnter:Connect(function() TweenService:Create(closeBtn, quick, {TextColor3 = Color3.fromRGB(255, 120, 120), TextSize = 16}):Play() end)
+closeBtn.MouseLeave:Connect(function() TweenService:Create(closeBtn, quick, {TextColor3 = Color3.fromRGB(160, 180, 210), TextSize = 14}):Play() end)
+
+-- Draggable Window
+local draggingWindow, dragStart, startPos = false, nil, nil
+main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWindow, dragStart, startPos = true, input.Position, main.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then draggingWindow = false end end)
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if draggingWindow and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
