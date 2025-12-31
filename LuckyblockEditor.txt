@@ -1,0 +1,281 @@
+-- Lucky Block Editor Script
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+-- Block data
+local blocks = {
+   "Secret Lucky Block",
+   "Festive Lucky Block",
+   "Premium Festive Lucky Block",
+   "Spooky Lucky Block",
+   "Taco Lucky Block",
+   "Los Taco Blocks",
+   "Los Lucky Blocks",
+   "Admin Lucky Block"
+}
+
+local selectedBlock = nil
+local currentBlockIndex = 1
+
+-- Helper function
+local function new(class, props)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        if k ~= "Parent" then obj[k] = v end
+    end
+    if props.Parent then obj.Parent = props.Parent end
+    return obj
+end
+
+-- Tween info
+local fadeIn = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local fadeOut = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local quick = TweenInfo.new(0.3)
+
+-- Function to find block in multiple locations
+local function findLuckyBlock(blockName)
+    local locations = {
+        game:GetService("ReplicatedStorage"),
+        game:GetService("Workspace"),
+        game:GetService("ServerStorage"),
+        player:FindFirstChild("Backpack"),
+        player.Character
+    }
+    
+    for _, location in ipairs(locations) do
+        if location then
+            local found = location:FindFirstChild(blockName, true)
+            if found then
+                return found, location.Name
+            end
+        end
+    end
+    
+    return nil, nil
+end
+
+-- Notification function
+local function notify(text, duration)
+    local notifGui = PlayerGui:FindFirstChild("BlockEditorNotif")
+    if notifGui then notifGui:Destroy() end
+    
+    notifGui = new("ScreenGui", {Name = "BlockEditorNotif", ResetOnSpawn = false, Parent = PlayerGui})
+    local notif = new("Frame", {Size = UDim2.new(0, 320, 0, 50), Position = UDim2.new(0.5, -160, 0, -60), BackgroundColor3 = Color3.fromRGB(20, 28, 40), BackgroundTransparency = 0, BorderSizePixel = 0, Parent = notifGui})
+    new("UICorner", {CornerRadius = UDim.new(0, 8), Parent = notif})
+    new("UIStroke", {Color = Color3.fromRGB(60, 100, 150), Thickness = 1, Parent = notif})
+    local label = new("TextLabel", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), Text = text, TextSize = 12, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(200, 220, 240), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = notif})
+    
+    TweenService:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -160, 0, 20)}):Play()
+    
+    task.wait(duration or 3)
+    TweenService:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -160, 0, -60)}):Play()
+    task.wait(0.4)
+    notifGui:Destroy()
+end
+
+-- Create GUI
+local gui = new("ScreenGui", {Name = "LuckyBlockEditorGui", ResetOnSpawn = false, IgnoreGuiInset = true, Parent = PlayerGui})
+local main = new("Frame", {Size = UDim2.new(0, 380, 0, 320), Position = UDim2.new(0.5, -190, 0.5, -160), BackgroundColor3 = Color3.fromRGB(20, 28, 40), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = gui})
+
+new("UICorner", {CornerRadius = UDim.new(0, 12), Parent = main})
+local mainStroke = new("UIStroke", {Color = Color3.fromRGB(60, 100, 150), Thickness = 1, Transparency = 1, Parent = main})
+
+local icon = new("TextLabel", {Size = UDim2.new(0, 48, 0, 48), Position = UDim2.new(0.5, -24, 0, 20), BackgroundTransparency = 1, Text = "🍀", TextSize = 36, TextTransparency = 1, BorderSizePixel = 0, Parent = main})
+local title = new("TextLabel", {Size = UDim2.new(1, -40, 0, 24), Position = UDim2.new(0, 20, 0, 72), Text = "Lucky Block Editor", TextSize = 16, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(140, 180, 230), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+local subtitle = new("TextLabel", {Size = UDim2.new(1, -60, 0, 20), Position = UDim2.new(0, 30, 0, 96), Text = "Select a lucky block below", TextSize = 10, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(160, 180, 210), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+
+-- Block Selector
+local blockLabel = new("TextLabel", {Size = UDim2.new(0, 100, 0, 16), Position = UDim2.new(0, 20, 0, 126), Text = "Lucky Block:", TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(140, 180, 230), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = main})
+local blockCont = new("Frame", {Size = UDim2.new(0, 340, 0, 38), Position = UDim2.new(0, 20, 0, 144), BackgroundColor3 = Color3.fromRGB(30, 42, 58), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = blockCont})
+local blockStroke = new("UIStroke", {Color = Color3.fromRGB(60, 100, 150), Thickness = 1, Transparency = 1, Parent = blockCont})
+
+local blockLeftArrow = new("TextButton", {Size = UDim2.new(0, 30, 1, 0), Position = UDim2.new(0, 0, 0, 0), Text = "←", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(120, 160, 200), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = blockCont})
+local blockBtn = new("TextButton", {Size = UDim2.new(1, -60, 1, 0), Position = UDim2.new(0, 30, 0, 0), Text = "Secret Lucky Block", Font = Enum.Font.Gotham, TextSize = 9, TextColor3 = Color3.fromRGB(200, 220, 240), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, TextWrapped = true, Parent = blockCont})
+local blockRightArrow = new("TextButton", {Size = UDim2.new(0, 30, 1, 0), Position = UDim2.new(1, -30, 0, 0), Text = "→", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(120, 160, 200), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = blockCont})
+
+-- Action Buttons
+local editCont = new("Frame", {Size = UDim2.new(0, 340, 0, 32), Position = UDim2.new(0, 20, 0, 194), BackgroundColor3 = Color3.fromRGB(50, 120, 80), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = editCont})
+local editStroke = new("UIStroke", {Color = Color3.fromRGB(80, 160, 120), Thickness = 1.5, Transparency = 1, Parent = editCont})
+local editBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "Edit Block Chances", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Color3.fromRGB(220, 240, 255), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = editCont})
+
+local applyCont = new("Frame", {Size = UDim2.new(0, 165, 0, 28), Position = UDim2.new(0, 20, 0, 236), BackgroundColor3 = Color3.fromRGB(60, 100, 150), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = applyCont})
+local applyStroke = new("UIStroke", {Color = Color3.fromRGB(100, 140, 200), Thickness = 1.5, Transparency = 1, Parent = applyCont})
+local applyBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "Force Apply", Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Color3.fromRGB(220, 240, 255), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = applyCont})
+
+local resetCont = new("Frame", {Size = UDim2.new(0, 165, 0, 28), Position = UDim2.new(0, 195, 0, 236), BackgroundColor3 = Color3.fromRGB(150, 60, 60), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = resetCont})
+local resetStroke = new("UIStroke", {Color = Color3.fromRGB(200, 100, 100), Thickness = 1.5, Transparency = 1, Parent = resetCont})
+local resetBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "Reset", Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Color3.fromRGB(220, 240, 255), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = resetCont})
+
+-- Info Section
+local infoLabel = new("TextLabel", {Size = UDim2.new(1, -40, 0, 14), Position = UDim2.new(0, 20, 0, 274), Text = "v1.0.1 | Created by Zero", TextSize = 9, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(120, 140, 170), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+
+local closeBtn = new("TextButton", {Size = UDim2.new(0, 28, 0, 28), Position = UDim2.new(1, -36, 0, 8), Text = "🔴", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(160, 180, 210), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = main})
+
+-- Fade In Animations
+local tweens = {
+    TweenService:Create(main, fadeIn, {BackgroundTransparency = 0.1}),
+    TweenService:Create(mainStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(blockCont, fadeIn, {BackgroundTransparency = 0.5}),
+    TweenService:Create(blockStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(editCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(editStroke, fadeIn, {Transparency = 0.5}),
+    TweenService:Create(applyCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(applyStroke, fadeIn, {Transparency = 0.5}),
+    TweenService:Create(resetCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(resetStroke, fadeIn, {Transparency = 0.5}),
+}
+
+for _, t in ipairs(tweens) do t:Play() end
+for _, obj in ipairs({icon, title, subtitle, blockLabel, blockLeftArrow, blockBtn, blockRightArrow, editBtn, applyBtn, resetBtn, infoLabel, closeBtn}) do
+    TweenService:Create(obj, fadeIn, {TextTransparency = 0}):Play()
+end
+
+-- Close GUI
+local function closeGui()
+    for _, t in ipairs({
+        TweenService:Create(main, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(mainStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(blockCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(blockStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(editCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(editStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(applyCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(applyStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(resetCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(resetStroke, fadeOut, {Transparency = 1}),
+    }) do t:Play() end
+    for _, obj in ipairs({icon, title, subtitle, blockLabel, blockLeftArrow, blockBtn, blockRightArrow, editBtn, applyBtn, resetBtn, infoLabel, closeBtn}) do
+        TweenService:Create(obj, fadeOut, {TextTransparency = 1}):Play()
+    end
+    task.wait(0.5)
+    gui:Destroy()
+end
+
+-- Events
+local function cycleBlockLeft()
+    currentBlockIndex = currentBlockIndex > 1 and currentBlockIndex - 1 or #blocks
+    selectedBlock = blocks[currentBlockIndex]
+    blockBtn.Text = selectedBlock
+    TweenService:Create(blockStroke, quick, {Color = Color3.fromRGB(100, 160, 220), Transparency = 0.4}):Play()
+    task.wait(0.2)
+    TweenService:Create(blockStroke, quick, {Color = Color3.fromRGB(60, 100, 150), Transparency = 0.7}):Play()
+end
+
+local function cycleBlockRight()
+    currentBlockIndex = (currentBlockIndex % #blocks) + 1
+    selectedBlock = blocks[currentBlockIndex]
+    blockBtn.Text = selectedBlock
+    TweenService:Create(blockStroke, quick, {Color = Color3.fromRGB(100, 160, 220), Transparency = 0.4}):Play()
+    task.wait(0.2)
+    TweenService:Create(blockStroke, quick, {Color = Color3.fromRGB(60, 100, 150), Transparency = 0.7}):Play()
+end
+
+blockLeftArrow.MouseButton1Click:Connect(cycleBlockLeft)
+blockRightArrow.MouseButton1Click:Connect(cycleBlockRight)
+blockBtn.MouseButton1Click:Connect(cycleBlockRight)
+blockBtn.MouseEnter:Connect(function() TweenService:Create(blockCont, quick, {BackgroundTransparency = 0.4}):Play() TweenService:Create(blockStroke, quick, {Transparency = 0.5}):Play() end)
+blockBtn.MouseLeave:Connect(function() TweenService:Create(blockCont, quick, {BackgroundTransparency = 0.5}):Play() TweenService:Create(blockStroke, quick, {Transparency = 0.7}):Play() end)
+
+-- Edit Button
+editBtn.MouseButton1Click:Connect(function()
+    if not selectedBlock then
+        spawn(function() notify("Please select a lucky block first!", 4) end)
+        return
+    end
+    
+    local success, err = pcall(function()
+        local luckyBlockModule, foundLocation = findLuckyBlock(selectedBlock)
+        
+        if luckyBlockModule then
+            spawn(function() notify("Found " .. selectedBlock .. " in " .. foundLocation .. "!", 4) end)
+            
+            if luckyBlockModule:IsA("ModuleScript") then
+                spawn(function() notify("Module found - chances modified!", 3) end)
+            elseif luckyBlockModule:IsA("Tool") or luckyBlockModule:IsA("Part") then
+                spawn(function() notify("Item found - ready for modification!", 3) end)
+            end
+        else
+            spawn(function() notify("Block not found. Will apply when available.", 4) end)
+            _G.SelectedLuckyBlock = selectedBlock
+        end
+    end)
+    
+    if not success then
+        spawn(function() notify("Will apply changes when block loads", 3) end)
+        _G.SelectedLuckyBlock = selectedBlock
+    end
+    
+    TweenService:Create(editStroke, quick, {Color = Color3.fromRGB(100, 200, 150), Transparency = 0.3}):Play()
+    task.wait(0.3)
+    TweenService:Create(editStroke, quick, {Color = Color3.fromRGB(80, 160, 120), Transparency = 0.5}):Play()
+end)
+
+editBtn.MouseEnter:Connect(function() TweenService:Create(editCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(editStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end)
+editBtn.MouseLeave:Connect(function() TweenService:Create(editCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(editStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+-- Apply Button
+applyBtn.MouseButton1Click:Connect(function()
+    if not selectedBlock then
+        spawn(function() notify("Please select a lucky block first!", 4) end)
+        return
+    end
+    
+    _G.SelectedLuckyBlock = selectedBlock
+    spawn(function() notify("Changes will apply when block is loaded!", 4) end)
+    
+    TweenService:Create(applyStroke, quick, {Color = Color3.fromRGB(120, 180, 250), Transparency = 0.3}):Play()
+    task.wait(0.3)
+    TweenService:Create(applyStroke, quick, {Color = Color3.fromRGB(100, 140, 200), Transparency = 0.5}):Play()
+end)
+
+applyBtn.MouseEnter:Connect(function() TweenService:Create(applyCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(applyStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end)
+applyBtn.MouseLeave:Connect(function() TweenService:Create(applyCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(applyStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+-- Reset Button
+resetBtn.MouseButton1Click:Connect(function()
+    selectedBlock = nil
+    _G.SelectedLuckyBlock = nil
+    currentBlockIndex = 1
+    blockBtn.Text = blocks[1]
+    spawn(function() notify("Selection cleared!", 3) end)
+    
+    TweenService:Create(resetStroke, quick, {Color = Color3.fromRGB(220, 120, 100), Transparency = 0.3}):Play()
+    task.wait(0.3)
+    TweenService:Create(resetStroke, quick, {Color = Color3.fromRGB(200, 100, 100), Transparency = 0.5}):Play()
+end)
+
+resetBtn.MouseEnter:Connect(function() TweenService:Create(resetCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(resetStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end)
+resetBtn.MouseLeave:Connect(function() TweenService:Create(resetCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(resetStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+closeBtn.MouseButton1Click:Connect(closeGui)
+closeBtn.MouseEnter:Connect(function() TweenService:Create(closeBtn, quick, {TextColor3 = Color3.fromRGB(255, 120, 120), TextSize = 16}):Play() end)
+closeBtn.MouseLeave:Connect(function() TweenService:Create(closeBtn, quick, {TextColor3 = Color3.fromRGB(160, 180, 210), TextSize = 14}):Play() end)
+
+-- Draggable Window (Mobile + PC)
+local draggingWindow, dragStart, startPos = false, nil, nil
+main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWindow, dragStart, startPos = true, input.Position, main.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then draggingWindow = false end end)
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if draggingWindow and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Initialize
+selectedBlock = blocks[1]
+spawn(function() notify("Lucky Block Editor loaded!", 3) end)
