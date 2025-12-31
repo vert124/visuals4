@@ -1,0 +1,299 @@
+-- Optimized Glassmorphic DUPE GUI
+-- All features retained, single-run DUPE, optimized
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local Debris = game:GetService("Debris")
+local UIS = game:GetService("UserInputService")
+
+-- Colors
+local C = {
+    Primary = Color3.fromRGB(110, 120, 255),
+    BG = Color3.fromRGB(20, 20, 25),
+    Secondary = Color3.fromRGB(85, 95, 120),
+    Text = Color3.fromRGB(238, 240, 255),
+    White = Color3.new(1,1,1),
+    Gray = Color3.fromRGB(200,200,200),
+    Black = Color3.new(0,0,0),
+    Success = Color3.fromRGB(18,183,106)
+}
+
+-- Rainbow gradient
+local Rainbow = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 99, 132)),
+    ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 159, 64)),
+    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 205, 86)),
+    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(75, 192, 192)),
+    ColorSequenceKeypoint.new(0.8, Color3.fromRGB(54, 162, 235)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(153, 102, 255))
+})
+
+-- Utility functions
+local function Tween(obj,dur,props)
+    TweenService:Create(obj, TweenInfo.new(dur), props):Play()
+end
+
+local function New(class, props)
+    local obj = Instance.new(class)
+    for k,v in props do
+        if k ~= "Parent" then obj[k] = v end
+    end
+    obj.Parent = props.Parent
+    return obj
+end
+
+-- -----------------------
+-- Loading Screen
+-- -----------------------
+local LoaderGUI = New("ScreenGui",{Parent=game.CoreGui})
+
+local LoaderFrame = New("Frame",{
+    AnchorPoint=Vector2.new(0.5,0.5),
+    Position=UDim2.fromScale(0.5,0.5),
+    Size=UDim2.new(),
+    BackgroundColor3=C.Black,
+    BackgroundTransparency=0.2,
+    BorderSizePixel=0,
+    ClipsDescendants=true,
+    Parent=LoaderGUI
+})
+New("UICorner",{CornerRadius=UDim.new(0,12),Parent=LoaderFrame})
+New("UIStroke",{Color=C.Primary,Thickness=2,Transparency=0.6,Parent=LoaderFrame})
+
+-- User Image
+local UserImg = New("ImageLabel",{
+    Image="rbxassetid://81767899440204",
+    Position=UDim2.fromOffset(15,10),
+    Size=UDim2.fromOffset(50,50),
+    BackgroundTransparency=1,
+    Parent=LoaderFrame
+})
+New("UICorner",{CornerRadius=UDim.new(0,25),Parent=UserImg})
+
+New("TextLabel",{
+    Text="Youtube: MozilOnTop",
+    Font=Enum.Font.GothamBold,
+    TextSize=14,
+    TextColor3=C.White,
+    Position=UDim2.fromOffset(75,10),
+    Size=UDim2.fromOffset(200,50),
+    TextXAlignment=Enum.TextXAlignment.Left,
+    BackgroundTransparency=1,
+    Parent=LoaderFrame
+})
+
+local TopLbl = New("TextLabel",{
+    Text=" ",
+    Font=Enum.Font.Gotham,
+    TextSize=10,
+    TextColor3=C.Gray,
+    Position=UDim2.fromOffset(30,70),
+    Size=UDim2.fromOffset(301,20),
+    TextXAlignment=Enum.TextXAlignment.Left,
+    BackgroundTransparency=1,
+    TextTransparency=1,
+    Parent=LoaderFrame
+})
+
+local Title = New("TextLabel",{
+    Text="<b>Subscribe To MozilOnTop</b>",
+    RichText=true,
+    Font=Enum.Font.Gotham,
+    TextSize=14,
+    TextColor3=C.White,
+    Position=UDim2.fromOffset(30,90),
+    Size=UDim2.fromOffset(301,46),
+    TextXAlignment=Enum.TextXAlignment.Left,
+    BackgroundTransparency=1,
+    TextTransparency=1,
+    Parent=LoaderFrame
+})
+
+local ProgBG = New("Frame",{
+    AnchorPoint=Vector2.new(0.5,0),
+    Position=UDim2.new(0.5,0,0,70),
+    Size=UDim2.new(0.85,0,0,24),
+    BackgroundColor3=Color3.fromRGB(40,40,40),
+    BackgroundTransparency=0.2,
+    BorderSizePixel=0,
+    Parent=LoaderFrame
+})
+New("UICorner",{CornerRadius=UDim.new(0,8),Parent=ProgBG})
+New("UIStroke",{Color=C.Primary,Thickness=2,Transparency=0.6,Parent=ProgBG})
+
+local ProgBar = New("Frame",{
+    Size=UDim2.fromOffset(0,24),
+    BackgroundColor3=Color3.fromRGB(130,36,212),
+    BackgroundTransparency=0.2,
+    BorderSizePixel=0,
+    Parent=ProgBG
+})
+New("UICorner",{CornerRadius=UDim.new(0,8),Parent=ProgBar})
+New("UIGradient",{Color=Rainbow,Parent=ProgBar})
+
+-- Animate loader
+Tween(LoaderFrame,0.25,{Size=UDim2.fromOffset(346,121)})
+task.wait(0.25)
+Tween(TopLbl,0.5,{TextTransparency=0})
+Tween(Title,0.5,{TextTransparency=0})
+Tween(ProgBG,0.5,{BackgroundTransparency=0.2})
+Tween(ProgBar,0.5,{BackgroundTransparency=0.2})
+task.wait(2)
+
+for _,data in {{10,0.2},{15,0.4},{20,0.7},{15,1}} do
+    Tween(ProgBar,0.5,{Size=UDim2.new(data[2],0,0,24)})
+    task.wait(data[1])
+end
+
+Tween(TopLbl,0.5,{TextTransparency=1})
+Tween(Title,0.5,{TextTransparency=1})
+Tween(ProgBG,0.5,{BackgroundTransparency=1})
+Tween(ProgBar,0.5,{BackgroundTransparency=1})
+task.wait(0.5)
+Tween(LoaderFrame,0.25,{Size=UDim2.new()})
+task.wait(0.25)
+LoaderGUI:Destroy()
+
+-- -----------------------
+-- Main GUI
+-- -----------------------
+if getgenv().__Mozil then return end
+getgenv().__Mozil = true
+
+local GUI = New("ScreenGui",{ResetOnSpawn=false,IgnoreGuiInset=true,Parent=Player:WaitForChild("PlayerGui")})
+
+-- Menu Button
+local MenuBtn = New("Frame",{
+    Size=UDim2.fromOffset(48,48),
+    Position=UDim2.new(0.08,0,0.25,0),
+    BackgroundColor3=C.Text,
+    BackgroundTransparency=0.15,
+    Parent=GUI
+})
+New("UICorner",{CornerRadius=UDim.new(1,0),Parent=MenuBtn})
+New("UIStroke",{Color=C.Primary,Thickness=2,Transparency=0.6,Parent=MenuBtn})
+New("UIGradient",{Rotation=25,Color=Rainbow,Parent=MenuBtn})
+New("TextLabel",{Text="≡",Font=Enum.Font.GothamBold,TextSize=20,TextColor3=C.BG,Size=UDim2.fromScale(1,1),BackgroundTransparency=1,Parent=MenuBtn})
+
+local MenuScale = New("UIScale",{Parent=MenuBtn})
+MenuBtn.MouseEnter:Connect(function() Tween(MenuScale,0.12,{Scale=1.06}) end)
+MenuBtn.MouseLeave:Connect(function() Tween(MenuScale,0.14,{Scale=1}) end)
+
+-- Panel
+local Panel = New("Frame",{
+    Size=UDim2.fromOffset(276,136),
+    Position=UDim2.new(0.5,-138,0.5,-68),
+    BackgroundColor3=C.White,
+    BackgroundTransparency=0.15,
+    Parent=GUI
+})
+New("UICorner",{CornerRadius=UDim.new(0,22),Parent=Panel})
+New("UIStroke",{Color=C.Primary,Thickness=2,Transparency=0.6,Parent=Panel})
+
+-- Toggle visibility
+local visible = true
+local currentSize = UDim2.fromOffset(276,136)
+MenuBtn.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 then
+        visible = not visible
+        if visible then
+            Panel.Visible=true
+            Tween(Panel,0.3,{Size=currentSize,Position=UDim2.new(0.5,-138,0.5,currentSize.Y.Offset/-2)})
+        else
+            Tween(Panel,0.3,{Size=UDim2.new(),Position=UDim2.fromScale(0.5,0.5)})
+            task.delay(0.3,function() Panel.Visible=false end)
+        end
+    end
+end)
+
+-- Dragging
+local drag,dragInput,start,startPos
+Panel.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 then
+        drag=true
+        start=i.Position
+        startPos=Panel.Position
+        i.Changed:Connect(function()
+            if i.UserInputState==Enum.UserInputState.End then drag=false end
+        end)
+    end
+end)
+Panel.InputChanged:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseMovement then dragInput=i end
+end)
+UIS.InputChanged:Connect(function(i)
+    if i==dragInput and drag then
+        local delta=i.Position-start
+        Panel.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+    end
+end)
+
+-- Labels
+New("TextLabel",{Text="YT: MozilOnTop",Font=Enum.Font.GothamBlack,TextSize=22,TextColor3=Color3.fromRGB(10,10,12),Position=UDim2.fromOffset(10,8),Size=UDim2.new(1,-20,0,30),BackgroundTransparency=1,Parent=Panel})
+New("TextLabel",{Text="Duplicate Script",Font=Enum.Font.GothamSemibold,TextSize=14,TextColor3=C.Secondary,Position=UDim2.fromOffset(10,36),Size=UDim2.new(1,-20,0,20),BackgroundTransparency=1,Parent=Panel})
+
+local Status = New("TextLabel",{Text="Ready.",Font=Enum.Font.Gotham,TextSize=13,TextColor3=C.Secondary,Position=UDim2.fromOffset(12,58),Size=UDim2.new(1,-24,0,18),TextXAlignment=Enum.TextXAlignment.Left,BackgroundTransparency=1,Parent=Panel})
+
+-- DUPE Button
+local Btn = New("TextButton",{Text="",Position=UDim2.fromOffset(12,82),Size=UDim2.new(1,-24,0,44),BackgroundColor3=C.Text,BackgroundTransparency=0.15,AutoButtonColor=false,Parent=Panel})
+New("UICorner",{CornerRadius=UDim.new(0,14),Parent=Btn})
+New("UIStroke",{Color=C.Primary,Thickness=2,Transparency=0.6,Parent=Btn})
+New("UIGradient",{Color=Rainbow,Parent=Btn})
+
+local BtnScale=New("UIScale",{Parent=Btn})
+Btn.MouseEnter:Connect(function() Tween(BtnScale,0.1,{Scale=1.03}) end)
+Btn.MouseLeave:Connect(function() Tween(BtnScale,0.14,{Scale=1}) end)
+
+-- Text shadows
+for _,pos in {{-1,0},{1,0},{0,-1},{0,1}} do
+    New("TextLabel",{Text="DUPE",Font=Enum.Font.GothamBlack,TextSize=20,TextColor3=C.Black,TextTransparency=0.35,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5)+UDim2.fromOffset(pos[1],pos[2]),Size=UDim2.fromScale(1,1),BackgroundTransparency=1,ZIndex=2,Parent=Btn})
+end
+New("TextLabel",{Text="DUPE",Font=Enum.Font.GothamBlack,TextSize=20,TextColor3=C.White,TextStrokeColor3=C.Black,TextStrokeTransparency=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(1,1),BackgroundTransparency=1,ZIndex=3,Parent=Btn})
+
+-- Progress bar
+local ProgFrame = New("Frame",{Position=UDim2.fromOffset(12,142),Size=UDim2.new(1,-24,0,30),BackgroundColor3=Color3.fromRGB(230,233,255),BackgroundTransparency=0.15,Visible=false,Parent=Panel})
+New("UICorner",{CornerRadius=UDim.new(0,14),Parent=ProgFrame})
+New("UIStroke",{Color=C.Primary,Thickness=2,Transparency=0.6,Parent=ProgFrame})
+
+local ProgFill = New("Frame",{Size=UDim2.new(0,0,1,0),BackgroundColor3=C.White,BackgroundTransparency=0.15,Parent=ProgFrame})
+New("UICorner",{CornerRadius=UDim.new(0,14),Parent=ProgFill})
+New("UIGradient",{Color=Rainbow,Parent=ProgFill})
+
+local ProgTxt=New("TextLabel",{Text="0%",Font=Enum.Font.GothamSemibold,TextSize=14,TextColor3=C.BG,Size=UDim2.fromScale(1,1),BackgroundTransparency=1,Parent=ProgFrame})
+
+-- DUPE Click logic
+local duping = false
+Btn.MouseButton1Click:Connect(function()
+    if duping then return end
+    duping = true
+    Btn.Active = false
+    Status.Text="Processing…"
+    Status.TextColor3=C.Secondary
+    ProgFrame.Visible=true
+
+    local ripple=New("Frame",{BackgroundColor3=C.Black,BackgroundTransparency=0.6,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.new(),ZIndex=5,Parent=Btn})
+    New("UICorner",{CornerRadius=UDim.new(1,0),Parent=ripple})
+    Tween(ripple,0.28,{BackgroundTransparency=1,Size=UDim2.fromOffset(1980,1980)})
+    Debris:AddItem(ripple,0.3)
+
+    local currentSize=UDim2.fromOffset(276,188)
+    Tween(Panel,0.25,{Size=currentSize,Position=UDim2.new(0.5,-138,0.5,-94)})
+    task.wait(0.26)
+
+    -- Progress animation
+    task.spawn(function()
+        local totalTime = 60
+        local steps = 100
+        for i = 1, steps do
+            ProgFill.Size = UDim2.new(i/steps,0,1,0)
+            ProgTxt.Text = math.floor(i/steps*100).."%"
+            task.wait(totalTime/steps)
+        end
+        Status.Text="Complete!"
+        Status.TextColor3=C.Success
+        ProgTxt.Text="Done"
+        Btn.Active=true
+        -- DUPING stays true so clicking again does nothing
+    end)
+end)
