@@ -1,0 +1,327 @@
+-- Candy Cane Editor Script
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+-- Data
+local CANDY_LOGO = "rbxassetid://81083444361233"
+local infiniteEnabled = false
+local delayTime = 0.5
+local lastTick = os.clock()
+
+-- Get candy label reference
+local gui = PlayerGui:WaitForChild("LeftBottom")
+local mainFrame = gui:WaitForChild("LeftBottom")
+local candyLabel = mainFrame:WaitForChild("CurrencyCandyCane")
+
+-- Helper function
+local function new(class, props)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        if k ~= "Parent" then obj[k] = v end
+    end
+    if props.Parent then obj.Parent = props.Parent end
+    return obj
+end
+
+-- Tween info
+local fadeIn = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local fadeOut = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local quick = TweenInfo.new(0.3)
+
+-- Helper functions
+local function getCurrentCandys()
+    return tonumber(candyLabel.Text:match("%d+")) or 50
+end
+
+local function setCandys(amount)
+    candyLabel.Text = tostring(amount)
+end
+
+local function spawnCollectParticle()
+    local Character = player.Character
+    if not Character then return end
+    local Head = Character:FindFirstChild("Head")
+    if not Head then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 80, 0, 80)
+    billboard.Adornee = Head
+    billboard.AlwaysOnTop = true
+    billboard.StudsOffset = Vector3.new(0, 3.3, 0)
+    billboard.Parent = Character
+
+    local image = Instance.new("ImageLabel")
+    image.Size = UDim2.new(1, 0, 1, 0)
+    image.BackgroundTransparency = 1
+    image.Image = CANDY_LOGO
+    image.AnchorPoint = Vector2.new(0.5, 0.5)
+    image.Position = UDim2.new(0.5, 0, 0.5, 0)
+    image.Parent = billboard
+
+    local tween = TweenService:Create(image, TweenInfo.new(1, Enum.EasingStyle.Linear), {Position = UDim2.new(0.5, 0, -0.5, 0), ImageTransparency = 1})
+    tween:Play()
+    tween.Completed:Connect(function() billboard:Destroy() end)
+end
+
+local function updateFestiveBlockCountdown()
+    local eventsFolder = Workspace:FindFirstChild("Events")
+    if not eventsFolder then return end
+    local fBlock = eventsFolder:FindFirstChild("Festive Lucky Block")
+    if not fBlock then return end
+    local model = fBlock:FindFirstChild("Model")
+    if not model then return end
+    local part = model:FindFirstChild("BillboardPart")
+    if not part then return end
+    local gui = part:FindFirstChild("BillboardGui")
+    if not gui then return end
+    local label = gui:FindFirstChild("Countdown")
+    if not label then return end
+    label.Text = getCurrentCandys().."/300"
+end
+
+local function updateProgressBar()
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if not playerGui then return end
+    local fGui = playerGui:FindFirstChild("FestiveLuckyBlock")
+    if not fGui then return end
+    local frame = fGui:FindFirstChild("Frame")
+    if not frame then return end
+    local progress = frame:FindFirstChild("Progress")
+    if not progress then return end
+    local fill = progress:FindFirstChild("Fill")
+    local label = progress:FindFirstChild("Label")
+    local spawnButton = frame:FindFirstChild("Spawn")
+    if not fill or not label then return end
+    local current = getCurrentCandys()
+    label.Text = current.."/300"
+    fill.Size = UDim2.new(math.min(current/300,1),0,1,0)
+    if spawnButton then
+        if current>=300 then
+            spawnButton.BackgroundColor3 = Color3.fromRGB(81,158,87)
+            spawnButton.Active = true
+            spawnButton.Selectable = true
+        else
+            spawnButton.Active = false
+            spawnButton.Selectable = false
+        end
+    end
+end
+
+-- Notification function
+local function notify(text, duration)
+    local notifGui = PlayerGui:FindFirstChild("CandyEditorNotif")
+    if notifGui then notifGui:Destroy() end
+    
+    notifGui = new("ScreenGui", {Name = "CandyEditorNotif", ResetOnSpawn = false, Parent = PlayerGui})
+    local notif = new("Frame", {Size = UDim2.new(0, 320, 0, 50), Position = UDim2.new(0.5, -160, 0, -60), BackgroundColor3 = Color3.fromRGB(40, 20, 20), BackgroundTransparency = 0, BorderSizePixel = 0, Parent = notifGui})
+    new("UICorner", {CornerRadius = UDim.new(0, 8), Parent = notif})
+    new("UIStroke", {Color = Color3.fromRGB(150, 60, 60), Thickness = 1, Parent = notif})
+    local label = new("TextLabel", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), Text = text, TextSize = 12, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(240, 200, 200), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = notif})
+    
+    TweenService:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -160, 0, 20)}):Play()
+    
+    task.wait(duration or 3)
+    TweenService:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -160, 0, -60)}):Play()
+    task.wait(0.4)
+    notifGui:Destroy()
+end
+
+-- Create GUI
+local mainGui = new("ScreenGui", {Name = "CandyCaneEditorGui", ResetOnSpawn = false, IgnoreGuiInset = true, Parent = PlayerGui})
+local main = new("Frame", {Size = UDim2.new(0, 380, 0, 380), Position = UDim2.new(0.5, -190, 0.5, -190), BackgroundColor3 = Color3.fromRGB(40, 20, 20), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = mainGui})
+
+new("UICorner", {CornerRadius = UDim.new(0, 12), Parent = main})
+local mainStroke = new("UIStroke", {Color = Color3.fromRGB(150, 60, 60), Thickness = 1, Transparency = 1, Parent = main})
+
+local icon = new("TextLabel", {Size = UDim2.new(0, 48, 0, 48), Position = UDim2.new(0.5, -24, 0, 20), BackgroundTransparency = 1, Text = "🍬", TextSize = 36, TextTransparency = 1, BorderSizePixel = 0, Parent = main})
+local title = new("TextLabel", {Size = UDim2.new(1, -40, 0, 24), Position = UDim2.new(0, 20, 0, 72), Text = "Candy Cane Editor", TextSize = 16, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(230, 140, 140), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+local subtitle = new("TextLabel", {Size = UDim2.new(1, -60, 0, 20), Position = UDim2.new(0, 30, 0, 96), Text = "Manage your candy canes", TextSize = 10, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(210, 160, 160), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+
+-- Candy Display
+local candyDisplayLabel = new("TextLabel", {Size = UDim2.new(0, 120, 0, 16), Position = UDim2.new(0, 20, 0, 126), Text = "Current Candys:", TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(230, 140, 140), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = main})
+local candyDisplay = new("Frame", {Size = UDim2.new(0, 340, 0, 38), Position = UDim2.new(0, 20, 0, 144), BackgroundColor3 = Color3.fromRGB(58, 30, 30), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = candyDisplay})
+local candyStroke = new("UIStroke", {Color = Color3.fromRGB(150, 60, 60), Thickness = 1, Transparency = 1, Parent = candyDisplay})
+local candyCountLabel = new("TextLabel", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), Text = "0", TextSize = 14, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(240, 200, 200), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = candyDisplay})
+
+-- Infinite Toggle
+local infiniteLabel = new("TextLabel", {Size = UDim2.new(0, 140, 0, 16), Position = UDim2.new(0, 20, 0, 194), Text = "Infinite Candys:", TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(230, 140, 140), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = main})
+local infiniteCont = new("Frame", {Size = UDim2.new(0, 340, 0, 32), Position = UDim2.new(0, 20, 0, 212), BackgroundColor3 = Color3.fromRGB(80, 50, 50), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = infiniteCont})
+local infiniteStroke = new("UIStroke", {Color = Color3.fromRGB(150, 80, 80), Thickness = 1.5, Transparency = 1, Parent = infiniteCont})
+local infiniteBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "OFF", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Color3.fromRGB(255, 220, 220), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = infiniteCont})
+
+-- Delay Slider
+local delayLabel = new("TextLabel", {Size = UDim2.new(0, 180, 0, 16), Position = UDim2.new(0, 20, 0, 256), Text = "Delay: 0.5s", TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(230, 140, 140), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = main})
+local sliderCont = new("Frame", {Size = UDim2.new(0, 340, 0, 20), Position = UDim2.new(0, 20, 0, 274), BackgroundColor3 = Color3.fromRGB(58, 30, 30), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 10), Parent = sliderCont})
+local sliderStroke = new("UIStroke", {Color = Color3.fromRGB(150, 60, 60), Thickness = 1, Transparency = 1, Parent = sliderCont})
+local sliderFill = new("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(200, 80, 80), BorderSizePixel = 0, Parent = sliderCont})
+new("UICorner", {CornerRadius = UDim.new(0, 10), Parent = sliderFill})
+local sliderBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "", BackgroundTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = sliderCont})
+
+-- Spawn Buttons
+local spawnLabel = new("TextLabel", {Size = UDim2.new(0, 180, 0, 16), Position = UDim2.new(0, 20, 0, 306), Text = "Festive Blocks:", TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(230, 140, 140), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, Parent = main})
+
+local festiveCont = new("Frame", {Size = UDim2.new(0, 165, 0, 28), Position = UDim2.new(0, 20, 0, 324), BackgroundColor3 = Color3.fromRGB(150, 60, 60), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = festiveCont})
+local festiveStroke = new("UIStroke", {Color = Color3.fromRGB(200, 100, 100), Thickness = 1.5, Transparency = 1, Parent = festiveCont})
+local festiveBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "Festive (300)", Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Color3.fromRGB(255, 220, 220), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = festiveCont})
+
+local premiumCont = new("Frame", {Size = UDim2.new(0, 165, 0, 28), Position = UDim2.new(0, 195, 0, 324), BackgroundColor3 = Color3.fromRGB(150, 60, 60), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = main})
+new("UICorner", {CornerRadius = UDim.new(0, 6), Parent = premiumCont})
+local premiumStroke = new("UIStroke", {Color = Color3.fromRGB(200, 100, 100), Thickness = 1.5, Transparency = 1, Parent = premiumCont})
+local premiumBtn = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), Text = "Premium (600)", Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Color3.fromRGB(255, 220, 220), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = premiumCont})
+
+-- Info & Close
+local infoLabel = new("TextLabel", {Size = UDim2.new(1, -40, 0, 14), Position = UDim2.new(0, 20, 0, 362), Text = "v1.0 | Candy Cane Editor", TextSize = 9, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(170, 120, 120), BackgroundTransparency = 1, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, Parent = main})
+local closeBtn = new("TextButton", {Size = UDim2.new(0, 28, 0, 28), Position = UDim2.new(1, -36, 0, 8), Text = "🔴", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.fromRGB(210, 160, 160), BackgroundTransparency = 1, TextTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Parent = main})
+
+-- Fade In Animations
+local tweens = {
+    TweenService:Create(main, fadeIn, {BackgroundTransparency = 0.1}),
+    TweenService:Create(mainStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(candyDisplay, fadeIn, {BackgroundTransparency = 0.5}),
+    TweenService:Create(candyStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(infiniteCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(infiniteStroke, fadeIn, {Transparency = 0.5}),
+    TweenService:Create(sliderCont, fadeIn, {BackgroundTransparency = 0.5}),
+    TweenService:Create(sliderStroke, fadeIn, {Transparency = 0.7}),
+    TweenService:Create(festiveCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(festiveStroke, fadeIn, {Transparency = 0.5}),
+    TweenService:Create(premiumCont, fadeIn, {BackgroundTransparency = 0.3}),
+    TweenService:Create(premiumStroke, fadeIn, {Transparency = 0.5}),
+}
+
+for _, t in ipairs(tweens) do t:Play() end
+for _, obj in ipairs({icon, title, subtitle, candyDisplayLabel, candyCountLabel, infiniteLabel, infiniteBtn, delayLabel, spawnLabel, festiveBtn, premiumBtn, infoLabel, closeBtn}) do
+    TweenService:Create(obj, fadeIn, {TextTransparency = 0}):Play()
+end
+
+-- Close GUI
+local function closeGui()
+    for _, t in ipairs({
+        TweenService:Create(main, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(mainStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(candyDisplay, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(candyStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(infiniteCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(infiniteStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(sliderCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(sliderStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(festiveCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(festiveStroke, fadeOut, {Transparency = 1}),
+        TweenService:Create(premiumCont, fadeOut, {BackgroundTransparency = 1}),
+        TweenService:Create(premiumStroke, fadeOut, {Transparency = 1}),
+    }) do t:Play() end
+    for _, obj in ipairs({icon, title, subtitle, candyDisplayLabel, candyCountLabel, infiniteLabel, infiniteBtn, delayLabel, spawnLabel, festiveBtn, premiumBtn, infoLabel, closeBtn}) do
+        TweenService:Create(obj, fadeOut, {TextTransparency = 1}):Play()
+    end
+    task.wait(0.5)
+    mainGui:Destroy()
+end
+
+-- Infinite Toggle Event
+infiniteBtn.MouseButton1Click:Connect(function()
+    infiniteEnabled = not infiniteEnabled
+    infiniteBtn.Text = infiniteEnabled and "ON" or "OFF"
+    TweenService:Create(infiniteCont, quick, {BackgroundColor3 = infiniteEnabled and Color3.fromRGB(80, 120, 50) or Color3.fromRGB(80, 50, 50)}):Play()
+    TweenService:Create(infiniteStroke, quick, {Color = infiniteEnabled and Color3.fromRGB(120, 200, 80) or Color3.fromRGB(150, 80, 80)}):Play()
+    spawn(function() notify(infiniteEnabled and 'Infinite Candys enabled!' or 'Infinite Candys disabled!', 3) end)
+end)
+
+infiniteBtn.MouseEnter:Connect(function() TweenService:Create(infiniteCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(infiniteStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end)
+infiniteBtn.MouseLeave:Connect(function() TweenService:Create(infiniteCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(infiniteStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+-- Slider Logic
+local dragging = false
+sliderBtn.MouseButton1Down:Connect(function() dragging = true end)
+UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local pos = math.clamp((input.Position.X - sliderCont.AbsolutePosition.X) / sliderCont.AbsoluteSize.X, 0, 1)
+        sliderFill.Size = UDim2.new(pos, 0, 1, 0)
+        delayTime = 0.5 + (pos * 4.5)
+        delayLabel.Text = string.format("Delay: %.2fs", delayTime)
+    end
+end)
+
+-- Festive Block Spawns
+festiveBtn.MouseButton1Click:Connect(function()
+    local current = getCurrentCandys()
+    if current >= 300 then
+        setCandys(current - 300)
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/AdminService/SpawnBrainrotInBase"):InvokeServer("Festive Lucky Block", "", "")
+        end)
+        spawn(function() notify('Festive Lucky Block spawned! -300 candys', 3) end)
+    else
+        spawn(function() notify('Not enough candys! (Current: '..current..')', 4) end)
+    end
+end)
+
+festiveBtn.MouseEnter:Connect(function() TweenService:Create(festiveCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(festiveStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end)
+festiveBtn.MouseLeave:Connect(function() TweenService:Create(festiveCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(festiveStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+premiumBtn.MouseButton1Click:Connect(function()
+    local current = getCurrentCandys()
+    if current >= 600 then
+        setCandys(current - 600)
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/AdminService/SpawnBrainrotInBase"):InvokeServer("Premium Festive Lucky Block", "", "")
+        end)
+        spawn(function() notify('Premium Festive Block spawned! -600 candys', 3) end)
+    else
+        spawn(function() notify('Not enough candys! (Current: '..current..')', 4) end)
+    end
+end)
+
+premiumBtn.MouseEnter:Connect(function() TweenService:Create(premiumCont, quick, {BackgroundTransparency = 0.2}):Play() TweenService:Create(premiumStroke, quick, {Transparency = 0.3, Thickness = 2}):Play() end)
+premiumBtn.MouseLeave:Connect(function() TweenService:Create(premiumCont, quick, {BackgroundTransparency = 0.3}):Play() TweenService:Create(premiumStroke, quick, {Transparency = 0.5, Thickness = 1.5}):Play() end)
+
+closeBtn.MouseButton1Click:Connect(closeGui)
+closeBtn.MouseEnter:Connect(function() TweenService:Create(closeBtn, quick, {TextColor3 = Color3.fromRGB(255, 120, 120), TextSize = 16}):Play() end)
+closeBtn.MouseLeave:Connect(function() TweenService:Create(closeBtn, quick, {TextColor3 = Color3.fromRGB(210, 160, 160), TextSize = 14}):Play() end)
+
+-- Draggable Window
+local draggingWindow, dragStart, startPos = false, nil, nil
+main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWindow, dragStart, startPos = true, input.Position, main.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then draggingWindow = false end end)
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if draggingWindow and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Auto Increment Logic
+RunService.RenderStepped:Connect(function()
+    candyCountLabel.Text = tostring(getCurrentCandys())
+    updateFestiveBlockCountdown()
+    updateProgressBar()
+    
+    if not infiniteEnabled then return end
+    if os.clock() - lastTick < delayTime then return end
+    lastTick = os.clock()
+    
+    local current = getCurrentCandys() + 1
+    setCandys(current)
+    spawnCollectParticle()
+end)
+
+-- Initialize
+setCandys(50)
+spawn(function() notify("Candy Cane Editor loaded!", 3) end)
